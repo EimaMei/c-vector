@@ -16,21 +16,27 @@ vector vector_init();
 /* Frees all of the memory from the vector. */
 int vector_free(vector vec);
 
-/* Gets the size (amount of indexes) of the vector. */
-size_t vector_len(vector vec);
-
 /* Pushes back 'item' to the back of the vector.*/
 int vector_push_back(vector vec, void* item, size_t size_of_item);
+/* Pops back the last element of the vector.*/
+int vector_pop_back(vector vec);
+
 /* Sets the 'index' of the vector to 'item'. */
 int vector_set(vector vec, int index, void* item, size_t size_of_item);
 /* Gets the 'index' of the vector. */
 void* vector_get(vector vec, int index);
-/* Deletes the specific 'index' item. */
-int vector_delete(vector vec, int index);
-/* Deletes everything in the vector. */
-int vector_delete_everything(vector vec);
+/* Returns a string version of the vector. */
+char* vector_str(vector vec);
 
-/* Resizes the memory of the vector on how many indexes it can hold. Function is used internally and not made for external use. */
+/* Deletes the specific 'index' item. */
+int vector_erase(vector vec, int index);
+/* Deletes everything in the vector. */
+int vector_clear(vector vec);
+
+/* Gets the size (amount of indexes) of the vector. */
+size_t vector_size(vector vec);
+
+/* Resizes the memory of the vector depending on the given capacity. Function is used internally and not made for external use. */
 int vector_resize(vector vec, size_t capacity);
 
 
@@ -97,6 +103,13 @@ int vector_push_back(vector vec, void* item, size_t size_of_item) {
 }
 
 
+int vector_pop_back(vector vec) {
+	internal_vector* v = vec;
+
+	return vector_erase(vec, v->size - 1);
+}
+
+
 int vector_set(vector vec, int index, void* item, size_t size_of_item) {
 	internal_vector* v = vec;
 
@@ -124,7 +137,28 @@ void* vector_get(vector vec, int index) {
 }
 
 
-int vector_delete(vector vec, int index) {
+char* vector_str(vector vec) {
+	internal_vector* v = vec;
+
+	if (v) {
+		char* result = malloc(v->size + 1);
+
+		if (!result)
+			return NULL;
+
+		int i;
+		for (i = 0; i < v->size; i++) /* Copy the vector to the result. */
+			result[i] = *((short*)v->items[i]);
+		result[v->size] = '\0';
+
+		return result;
+	}
+
+	return NULL;
+}
+
+
+int vector_erase(vector vec, int index) {
 	internal_vector* v = vec;
 
 	if (v) {
@@ -149,7 +183,7 @@ int vector_delete(vector vec, int index) {
 }
 
 
-int vector_delete_everything(vector vec) {
+int vector_clear(vector vec) {
 	internal_vector* v = vec;
 
 	if (v) {
@@ -180,7 +214,7 @@ int vector_free(vector vec) {
 }
 
 
-size_t vector_len(vector vec) {
+size_t vector_size(vector vec) {
 	internal_vector* v = vec;
 
 	return v->size;

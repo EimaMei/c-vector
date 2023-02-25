@@ -25,7 +25,7 @@ int main(void) {
 
 
 	int i;
-	for (i = 0; i < vector_len(vec); i++) { /* We get the element count of the array (array's size/length) via vector_len(vec). With that we can iterate through the vector. */
+	for (i = 0; i < vector_size(vec); i++) { /* We get the element count of the array (array's size/length) via vector_size(vec). With that we can iterate through the vector. */
 		printf("At index '%i', we have value \"%s\"\n", i, vector_get(vec, i)); /* Since we know all of the elements in the array are strings, we can print them via the string format. */
 	}
 
@@ -37,8 +37,8 @@ int main(void) {
 	 	Delete the first element as we don't need it anymore.
 		Since the first element is erased, every other elements' index decrements by one (meaning the second value's index is now 0, not 1).
 	*/
-	vector_delete(vec, 0);
-	printf("Current size of 'vec': %i\n", vector_len(vec));
+	vector_erase(vec, 0);
+	printf("Current size of 'vec': %i\n", vector_size(vec));
 
 
 	/*
@@ -52,11 +52,21 @@ int main(void) {
 	/* We can also insert any other type other than char since this is a void*. */
 	vector_push_back(vec, &hex, sizeof(int));
 	vector_push_back(vec, &letter, sizeof(letter));
-	printf("Current size of 'vec': %i\n", vector_len(vec));
+	printf("Current size of 'vec': %i\n", vector_size(vec));
 
 
-	vector_delete_everything(vec); /* Removes every value from the vector. */
-	printf("Current size of 'vec': %i\n", vector_len(vec));
+	vector_clear(vec); /* Removes every value from the vector. */
+	printf("Current size of 'vec': %i\n", vector_size(vec));
+
+
+	unsigned char k;
+	for (k = ' '; k < 0xFF; k++) /* Copy every ASCII leter (including those in the extended table) from space to the last character code 0xFF. */
+		vector_push_back(vec, &k, sizeof(k));
+	char* ascii_letters = vector_str(vec);
+	printf("The string version of the entire vector: \"%s\" (%i element count)\n", ascii_letters, vector_size(vec));
+
+	vector_pop_back(vec); /* Pop the back element. */
+	printf("We now only have %i elements left in the vector\n", vector_size(vec));
 
 
 	vector_free(vec); /* Free the variable since we don't wanna use it anymore.*/
