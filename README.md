@@ -14,7 +14,7 @@ To use it you must define `VECTOR_IMPLEMENTATION` once before including `vector.
 #include <vector.h>
 ```
 
-Explanations on what each function does is in [vector.h](vector.h). There's also a provided example [here](example.c), utilizing all of the features of the library.
+Explanations on what each function does are in [vector.h](vector.h). There's also a provided example [here](example.c), utilizing all of the features of the library.
 
 # Credits
 Original implementation is by [this article](https://aticleworld.com/implement-vector-in-c/)</br>
