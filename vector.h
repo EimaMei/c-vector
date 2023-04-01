@@ -9,6 +9,10 @@
 #include <stdlib.h> /* For malloc */
 #include <string.h> /* For memcpy */
 
+#ifdef VECTOR_PRINT_ERRORS
+#include <stdio.h> /* For printf */
+#endif
+
 typedef void* vector;
 
 /* Initializes the vector. */
@@ -21,27 +25,33 @@ int vector_push_back(vector vec, void* item, size_t size_of_item);
 /* Pops back the last element of the vector.*/
 int vector_pop_back(vector vec);
 
-/* Sets the 'index' of the vector to 'item'. */
-int vector_set(vector vec, int index, void* item, size_t size_of_item);
 /* Gets the 'index' of the vector. */
-void* vector_get(vector vec, int index);
+void* vector_get(vector vec, size_t index);
+/* Gets the first element of the vector. */
+void* vector_front(vector vec);
+/* /* Gets the last element of the vector. */
+void* vector_end(vector vec);
 /* Returns a string version of the vector. */
-char* vector_str(vector vec);
+char* vector_str(vector vec, char* str_to_add_between_elements);
 
+/* Sets the 'index' of the vector to 'item'. */
+int vector_set(vector vec, size_t index, void* item, size_t size_of_item);
+/* Inserts an item into the provided index. */
+int vector_insert(vector vec, size_t index, void* item, size_t size_of_item);
 /* Deletes the specific 'index' item. */
-int vector_erase(vector vec, int index);
+int vector_erase(vector vec, size_t index);
 /* Deletes everything in the vector. */
 int vector_clear(vector vec);
 
 /* Gets the size (amount of indexes) of the vector. */
 size_t vector_size(vector vec);
 
+
+#ifdef VECTOR_IMPLEMENTATION
+
 /* Resizes the memory of the vector depending on the given capacity. Function is used internally and not made for external use. */
 int vector_resize(vector vec, size_t capacity);
 
-
-
-#ifdef VECTOR_IMPLEMENTATION
 
 typedef struct internal_vector {
 	void** items;     /* Value of the vector itself. */
@@ -67,15 +77,20 @@ vector vector_init() {
 int vector_resize(vector vec, size_t capacity) {
 	internal_vector* v = vec;
 
-	if (v) {
-		void** items = realloc(v->items, sizeof(void*) * capacity);
+	if (!v) {
+		#ifdef VECTOR_PRINT_ERRORS
+		printf("vector_resize: Provided vector is an invalid vector handle.\n");
+		#endif
+		return -1;
+	}
 
-		if (items) {
-			v->items = items;
-			v->capacity = capacity;
+	void** items = realloc(v->items, sizeof(void*) * capacity);
 
-			return 0;
-		}
+	if (items) {
+		v->items = items;
+		v->capacity = capacity;
+
+		return 0;
 	}
 
 	return -1;
@@ -85,21 +100,41 @@ int vector_resize(vector vec, size_t capacity) {
 int vector_push_back(vector vec, void* item, size_t size_of_item) {
 	internal_vector* v = vec;
 
-	if (v) {
-		void* copied_value = malloc(size_of_item); /* Copy the item's value into the array so that the value doesn't get accidentally overwritten. */
-		memcpy(copied_value, item, size_of_item);
-
-		if (v->capacity == v->size) { /* We don't have enough memory to store the next value. */
-			if (vector_resize(vec, v->capacity * 2) != -1) /* Instead of realloc every two seconds, just multiply. Might be a little inefficient memory wise but CPU wise btter. */
-				v->items[v->size++] = copied_value;
-		}
-		else /* We have enough memory. */
-			v->items[v->size++] = copied_value;
-
-		return 0;
+	if (!v) {
+		#ifdef VECTOR_PRINT_ERRORS
+		printf("vector_push_back: Provided vector is an invalid vector handle.\n");
+		#endif
+		return -1;
 	}
 
-	return -1;
+	if (v->capacity == v->size) {
+		if (vector_resize(vec, v->capacity * 2) != 0) {
+			#ifdef VECTOR_PRINT_ERRORS
+			printf("vector_push_back: Failed to resize vector.\n");
+			#endif
+			return -2;
+		}
+	}
+
+	void* new_item = malloc(size_of_item);
+	if (!new_item) {
+		#ifdef VECTOR_PRINT_ERRORS
+		printf("vector_push_back: Failed to allocate a copy of 'item'.\n");
+		#endif
+		return -3;
+	}
+
+	void* res = memcpy(new_item, item, size_of_item);
+	if (!res) {
+		#ifdef VECTOR_PRINT_ERRORS
+		printf("vector_push_back: Failed to copy 'item' to array.\n");
+		#endif
+		return -4;
+	}
+
+	v->items[v->size++] = new_item;
+
+	return 0;
 }
 
 
@@ -110,14 +145,18 @@ int vector_pop_back(vector vec) {
 }
 
 
-int vector_set(vector vec, int index, void* item, size_t size_of_item) {
+int vector_set(vector vec, size_t index, void* item, size_t size_of_item) {
 	internal_vector* v = vec;
 
 	if (v && (index >= 0) && (index < v->size)) {
-		void* copied_value = malloc(size_of_item); /* Copy the item's value into the array so that the value doesn't get accidentally overwritten. */
-		memcpy_s(copied_value, size_of_item, item, size_of_item);
+		void* copied_item = malloc(size_of_item);
+		memcpy(copied_item, item, size_of_item);
 
-		v->items[index] = copied_value;
+		if (copied_item == NULL)
+			return -2;
+
+		v->items[index] = copied_item;
+
 		return 0;
 	}
 
@@ -125,92 +164,155 @@ int vector_set(vector vec, int index, void* item, size_t size_of_item) {
 }
 
 
-void* vector_get(vector vec, int index) {
+void* vector_get(vector vec, size_t index) {
 	internal_vector* v = vec;
 	void* readData = NULL;
 
-	if (v) {
-		if ((index >= 0) && (index < v->size))  /* 0 <= index < (size of vector). */
-			readData = v->items[index];
-	}
+	if (v && (index >= 0) && (index < v->size))  /* 0 <= index < (size of vector). */
+		readData = v->items[index];
+
 	return readData;
 }
 
 
-char* vector_str(vector vec) {
+void* vector_front(vector vec) {
 	internal_vector* v = vec;
+	void* readData = NULL;
 
-	if (v) {
-		char* result = malloc(v->size + 1);
+	if (v && (0 < v->size))
+		readData = v->items[0];
 
-		if (!result)
-			return NULL;
-
-		int i;
-		for (i = 0; i < v->size; i++) /* Copy the vector to the result. */
-			result[i] = *((short*)v->items[i]);
-		result[v->size] = '\0';
-
-		return result;
-	}
-
-	return NULL;
+	return readData;
 }
 
 
-int vector_erase(vector vec, int index) {
+void* vector_end(vector vec) {
+	internal_vector* v = vec;
+	void* readData = NULL;
+
+	if (v && 0 < v->size)
+		readData = v->items[v->size - 1];
+
+	return readData;
+}
+
+
+char* vector_str(vector vec, char* str_to_add_between_elements) {
 	internal_vector* v = vec;
 
-	if (v) {
-		if ((index < 0) || (index >= v->size))
-			return -1;
+	if (!v)
+		return NULL;
 
-		v->items[index] = NULL;
 
-		int i;
-		for (i = index; i < v->size - 1; i++) { /* Now we gotta reshuffle the memory... */
-			v->items[i] = v->items[i + 1];
-			v->items[i + 1] = NULL;
-		}
+	size_t i, size = 0;
+	for (i = 0; i < v->size; i++) {
+		char* txt = (char*)vector_get(vec, i);
 
-		v->size--; /* Less memory occupied. */
-		if ((v->size > 0) && ((v->size) == (v->capacity / 4)))
-			vector_resize(vec, v->capacity / 2);
+		if (i != v->size - 1)
+			size += strlen(txt) + strlen(str_to_add_between_elements);
+		else
+			size += strlen(txt);
 
-		return 0;
 	}
-	return -1;
+
+	char* result = malloc(size + 1);
+    char* ptr = result;
+
+    for (i = 0; i < v->size; i++) {
+        char* txt = (char*)vector_get(vec, i);
+
+		if (i != v->size - 1)
+			ptr += sprintf(ptr, "%s%s", txt, str_to_add_between_elements);
+		else
+			ptr += sprintf(ptr, "%s", txt);
+    }
+    *ptr = '\0'; /* Since we're at the end of our sentence, this line is equivalent to doing 'ptr[strlen(ptr)] = '\0';' */
+
+	return result;
+}
+
+
+int vector_insert(vector vec, size_t index, void* item, size_t size_of_item) {
+	internal_vector* v = vec;
+
+	if (!v)
+		return -1;
+
+	if ((index < 0) || (index >= v->size))
+		return -1;
+
+
+	void* copied_item = malloc(size_of_item);
+	memcpy(copied_item, item, size_of_item);
+
+	v->size++; /* Less memory occupied. */
+
+	if (v->size == v->capacity)
+		vector_resize(vec, v->capacity * 2);
+
+
+	size_t i;
+	void* new_value = copied_item;
+	for (i = index; i < v->size; i++) { /* Now we gotta reshuffle the memory... */
+		void* og = v->items[i];
+		v->items[i] = new_value;
+		new_value = og;
+	}
+
+	return 0;
+}
+
+
+int vector_erase(vector vec, size_t index) {
+	internal_vector* v = vec;
+
+	if (!v)
+		return -1;
+
+	if ((index < 0) || (index >= v->size))
+		return -1;
+
+	v->items[index] = NULL;
+
+	size_t i;
+	for (i = index; i < v->size - 1; i++) { /* Now we gotta reshuffle the memory... */
+		v->items[i] = v->items[i + 1];
+		v->items[i + 1] = NULL;
+	}
+
+	v->size--; /* Less memory occupied. */
+	if ((v->size > 0) && ((v->size) == (v->capacity / 4)))
+		vector_resize(vec, v->capacity / 2);
+
+	return 0;
 }
 
 
 int vector_clear(vector vec) {
 	internal_vector* v = vec;
 
-	if (v) {
-		free(v->items);
+	if (!v)
+		return -1;
 
-		v->items = malloc(sizeof(*v->items) * 8); /* Essentially just re-init the vector again. */
-		v->capacity = 8;
-		v->size = 0;
+	free(v->items);
 
-		return 0;
-	}
+	v->items = malloc(sizeof(*v->items) * v->capacity); /* Essentially just re-init the vector again. */
+	v->size = 0;
 
-	return -1;
+	return 0;
 }
 
 
 int vector_free(vector vec) {
 	internal_vector* v = vec;
 
-	if (v) {
-		free(v->items);
-		free(v);
+	if (!v)
+		return -1;
 
-		return 0;
-	}
+	free(v->items);
+	free(v);
 
-	return -1;
+	return 0;
 }
 
 
