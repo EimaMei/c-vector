@@ -1,3 +1,6 @@
+# Note as of 2024-07-26
+Don't use this, use `siArray` in my single header repository [sili.h](https://github.com/EimaMei/sili-toolchain). Same thing except 1000000x times better with more features and what not.
+
 # C vector
 A very simple header-only implementation of a dynamic array (vector) in C with all the required features for a dynamic array.
 
